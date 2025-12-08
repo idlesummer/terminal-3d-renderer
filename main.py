@@ -1,194 +1,155 @@
-import math
-import time
+import time 
+from math import cos, floor, sin
 
-
-# ============================================================================
-# POLYGON CLASS
-# ============================================================================
 
 class Polygon:
-    """A general polygon defined by N vertices."""
+    """A polygon defined by N vertices in continuous space."""
 
     def __init__(self, vertices):
+        """Create polygon from vertices."""
         self.vertices = vertices
+        self.xs, self.ys = zip(*vertices)
 
-        xs = [v[0] for v in vertices]
-        ys = [v[1] for v in vertices]
+    @staticmethod    
+    def segment_contains(x, y, x1, y1, x2, y2):
+        """Return True if point (x, y) lies exactly on the segment from (x1, y1) to (x2, y2) inclusive."""
+        if (x-x1)*(y2-y1) - (y-y1)*(x2-x1) != 0:                # Collinearity check (cross product)
+            return False
+        return (x-x1) * (x-x2) <= 0 and (y-y1) * (y-y2) <= 0    # Between check (inclusive)
 
-        self.min_x = math.floor(min(xs))
-        self.max_x = math.floor(max(xs))
-        self.min_y = math.floor(min(ys))
-        self.max_y = math.floor(max(ys))
+    def contains(self, x, y):
+        """Point-in-polygon (edge/vertex inclusive) using ray casting with a half-open rule."""
+        inside = False
 
-    def points(self):
-        """Iterate over all (x, y) points in the bounding box."""
-        for y in range(self.min_y, self.max_y + 1):
-            for x in range(self.min_x, self.max_x + 1):
-                yield x, y
+        # Start with last vertex to close the loop
+        x1, y1 = self.vertices[-1]
+        for x2, y2 in self.vertices:
+            if self.segment_contains(x, y, x1, y1, x2, y2):
+                return True
 
-    def __getitem__(self, idx):
-        """Allow indexing: poly[i] gives vertex i."""
-        return self.vertices[idx]
+            # Ray casting (half-open)
+            if (y1 > y) != (y2 > y):                            # Does the scanline y cross the vertical span of this edge?
+                x_intercept = x1 + (y-y1) * (x2-x1) / (y2-y1)   # Compute x intersection
 
+                if x < x_intercept:                             # Count only intersections to the RIGHT of the point
+                    inside = not inside
+            x1, y1 = x2, y2                                     # Advance to next vertex
 
-# ============================================================================
-# MATRIX CLASS
-# ============================================================================
+        return inside
+    
+    def lattice_points(self):
+        """Iterate over all (x, y) integer points inside the polygon."""
+        minx, maxx = floor(min(self.xs)), floor(max(self.xs))
+        miny, maxy = floor(min(self.ys)), floor(max(self.ys))
 
-class Matrix:
-    def __init__(self, height, width, fill):
-        self.h = height
-        self.w = width
-        self.buf = [fill] * (width * height)
+        for y in range(miny, maxy + 1):
+            for x in range(minx, maxx + 1):
+                if self.contains(x, y):
+                    yield x, y
 
-    def __getitem__(self, pos):
-        x, y = pos
-        return self.buf[y * self.w + x]
+ 
+class Screen:
+    """Software renderer; assumes world coordinates, centers origin, fixed 2:1 scaling."""
 
-    def __setitem__(self, pos, value):
-        x, y = pos
-        self.buf[y * self.w + x] = value
-
-    def fill(self, value):
-        self.buf = [value] * (self.w * self.h)
-
-    def row(self, y):
-        """Get entire row as a list"""
-        sta = y * self.w
-        end = sta + self.w
-        return self.buf[sta:end]
-
-
-# ============================================================================
-# RENDERER
-# ============================================================================
-
-
-class Renderer:
     def __init__(self, width, height):
         self.width = width
         self.height = height
-        self.frame = Matrix(height, width, ' ')
-        self.depth = Matrix(height, width, 0.0)
+        self.ox = width // 2      # origin at center (x)
+        self.oy = height // 2     # origin at center (y)
+
+        # Inline 2D buffers
+        self.frame = [' '] * (width * height)
+        self.depth = [1.0] * (width * height)   # 0.0 = near, 1.0 = far
 
     def clear(self):
-        """Clear both buffers"""
-        self.frame.fill(' ')
-        self.depth.fill(0.0)
+        """Clear both frame and depth buffers."""
+        self.frame[:] = [' '] * (self.width * self.height)
+        self.depth[:] = [1.0] * (self.width * self.height)
 
     def set_pixel(self, x, y, char, depth):
-        """Draw a single pixel with depth testing"""
-        if not (0 <= x < self.width): return
-        if not (0 <= y < self.height): return
-        if depth <= self.depth[x, y]: return
+        """Draw a single pixel with depth testing (unsafe)."""
+        idx = y * self.width + x
+        if depth <= self.depth[idx]:
+            self.depth[idx] = depth
+            self.frame[idx] = char
 
-        self.depth[x, y] = depth
-        self.frame[x, y] = char
-
-    def fill_quad(self, vertices_2d, char='#'):
-        """Fill a quad with depth testing"""
-        quad = Polygon(vertices_2d)
-
-        # Clamp bounding box to screen bounds
-        min_x = max(0, quad.min_x)
-        max_x = min(self.width - 1, quad.max_x)
-        min_y = max(0, quad.min_y)
-        max_y = min(self.height - 1, quad.max_y)
-
-        # Fill all pixels inside quad
-        for py in range(min_y, max_y + 1):
-            for px in range(min_x, max_x + 1):
-                if self._point_in_quad(px, py, quad[0], quad[1], quad[2], quad[3]):
-                    depth = self._interpolate_depth(px, py, quad[0], quad[1], quad[2], quad[3])
-
-                    if depth > self.depth[px, py]:
-                        self.depth[px, py] = depth
-                        self.frame[px, py] = char
-
-    def _point_in_quad(self, px, py, v0, v1, v2, v3):
-        """Check if point is inside quad"""
-        def sign(px, py, ax, ay, bx, by):
-            return (px - bx) * (ay - by) - (ax - bx) * (py - by)
-        
-        d1 = sign(px, py, v0[0], v0[1], v1[0], v1[1])
-        d2 = sign(px, py, v1[0], v1[1], v2[0], v2[1])
-        d3 = sign(px, py, v2[0], v2[1], v3[0], v3[1])
-        d4 = sign(px, py, v3[0], v3[1], v0[0], v0[1])
-        
-        has_neg = (d1 < 0) or (d2 < 0) or (d3 < 0) or (d4 < 0)
-        has_pos = (d1 > 0) or (d2 > 0) or (d3 > 0) or (d4 > 0)
-        return not (has_neg and has_pos)
+    def world_to_screen(self, x, y):
+        """Convert world coordinates to screen coordinates."""
+        sx = self.ox + x * 2    # horizontal units are 2:1 to compensate terminal aspect ratio
+        sy = self.oy - y
+        return sx, sy
     
-    def _interpolate_depth(self, px, py, v0, v1, v2, v3):
-        """Interpolate depth at pixel"""
-        total_weight = 0.0
-        weighted_depth = 0.0
-        
-        for vx, vy, vz in [v0, v1, v2, v3]:
-            dist = math.sqrt((px - vx)**2 + (py - vy)**2)
-            if dist < 0.001:
-                return vz
-            weight = 1.0 / (dist + 0.1)
-            weighted_depth += weight * vz
-            total_weight += weight
-        
-        return weighted_depth / total_weight
-    
-    def display(self):
-        """Display to terminal"""
-        print("\033[H", end="")
+    def point(self, x, y, char, depth=0.0):
+        """Draw a single world-space point."""
+        sx, sy = self.world_to_screen(x, y)
+
+        # Only draw if inside screen
+        if (0 <= sx < self.width) and (0 <= sy < self.height):
+            self.set_pixel(sx, sy, char, depth)
+
+    def polygon(self, vertices, fill='#', depth=0.0):
+        """Rasterize and fill a polygon with depth testing."""
+        # Convert world coordinates to screen coordinates
+        screen_vertices = [self.world_to_screen(x, y) for (x, y) in vertices]
+        polygon = Polygon(screen_vertices)
+
+        for x, y in polygon.lattice_points():
+            if (0 <= x < self.width) and (0 <= y < self.height):
+                self.set_pixel(x, y, char=fill, depth=depth)
+
+    def render(self):
+        """Return the frame buffer as a string with borders."""
+        buffer = ['┌' + '─' * self.width + '┐\n']
+
         for y in range(self.height):
-            row = self.frame.row(y)
-            print(''.join(row))
-            
+            offset = y * self.width
+            buffer.append('│')
+            buffer.extend(''.join(self.frame[offset:offset+self.width]))
+            buffer.append('│\n')
 
-# ============================================================================
-# MAIN - ROTATING SQUARE
-# ============================================================================
+        buffer.append('└' + '─' * self.width + '┘')
+        return ''.join(buffer)
+
 
 def main():
-    renderer = Renderer(width=80, height=40)
+    screen = Screen(width=80, height=40)
 
-    # Clear screen and hide cursor
-    print("\033[2J\033[?25l", end="")
-
-    # Define square
-    s = 15
+    # Define square in Cartesian (world) space
+    side = 15
+    angle = 0.0
     square = [
-        (-s/2, -s/2),
-        (s/2, -s/2),
-        (s/2, s/2),
-        (-s/2, s/2),
+        (-side/2, -side/2), 
+        (side/2, -side/2), 
+        (side/2, side/2), 
+        (-side/2, side/2)
     ]
 
-    angle = 0.0
+    # Clear screen and hide cursor
+    print('\033[2J\033[?25l', end='')
 
     try:
         while True:
-            renderer.clear()
+            screen.clear()
 
-            # Rotate square
+            # Rotate square in world space
             rotated = []
             for x, y in square:
-                new_x = x * math.cos(angle) - y * math.sin(angle)
-                new_y = x * math.sin(angle) + y * math.cos(angle)
+                nx = x * cos(angle) - y * sin(angle)
+                ny = x * sin(angle) + y * cos(angle)
+                rotated.append((nx, ny))
 
-                # Convert to screen coordinates
-                screen_x = renderer.width // 2 + new_x * 2
-                screen_y = renderer.height // 2 - new_y
-
-                rotated.append((screen_x, screen_y, 1.0))
-
-            # Draw
-            renderer.fill_quad(rotated, '.')
-            renderer.display()
+            # Draw (screen handles coordinate transformation)
+            screen.polygon(rotated, fill='·')
+            
+            print('\033[H', end='')
+            print(screen.render())
 
             angle += 0.05
             time.sleep(0.05)
 
     except KeyboardInterrupt:
-        print("\033[?25h\n\nStopped.")
+        print('\033[?25h\n\nStopped.')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
