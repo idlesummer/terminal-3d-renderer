@@ -1,5 +1,22 @@
-from math import cos, sin, floor, pi
-import time 
+from math import floor
+from typing import Self
+
+
+class Point:
+    x: float
+    y: float
+    z: float
+    
+    def __init__(self, x: float, y: float, z: float):
+        self.x = x
+        self.y = y
+        self.z = z
+        
+    def coords(self):
+        return self.x, self.y, self.z
+    
+    def __sub__(self, other: Self):
+        return Point(self.x-other.x, self.y-other.y, self.z-other.z)
 
 
 class Polygon:
@@ -21,7 +38,7 @@ class Polygon:
     ):
         """Return True if point (x, y) lies exactly on the segment from (x1, y1) to (x2, y2) inclusive."""
         if (x-x1)*(y2-y1) - (y-y1)*(x2-x1) != 0:                # Collinearity check (cross product)
-            return False
+            return False          
         return (x-x1) * (x-x2) <= 0 and (y-y1) * (y-y2) <= 0    # Between check (inclusive)
 
     def contains(self, x: float, y: float):
@@ -41,7 +58,6 @@ class Polygon:
                 if x < x_intercept:                             # Count only intersections to the RIGHT of the point
                     inside = not inside
             x1, y1 = x2, y2                                     # Advance to next vertex
-
         return inside
 
     def lattice_points(self):
@@ -125,19 +141,33 @@ class Screen:
         return ''.join(buffer)
 
 
+
+
 def main():
-    screen = Screen(width=80, height=40)
-
-    # Define square in Cartesian (world) space
-    s = 25
-    square = [(-s/2, -s/2), (s/2, -s/2), (s/2, s/2), (-s/2, s/2)]
-    angle = 0.0
-
-    # Clear screen and hide cursor
-    print('\033[2J\033[?25l', end='')
+    import time
+    from math import cos, sin, pi
+    # from graphics import Screen
 
     try:
+        screen = Screen(width=80, height=40)
+
+        # Define square in Cartesian (world) space
+        side = 25
+        angle = 0.0
+        square = [
+            (-side/2, -side/2), 
+            (side/2,  -side/2), 
+            (side/2,  side/2), 
+            (-side/2, side/2),
+        ]
+
+        # Clear screen and hide cursor
+        print('\033[2J\033[?25l', end='')
+
         while True:
+            if angle >= pi * 2:
+                angle = 0
+
             screen.clear()
 
             # Rotate square in world space
