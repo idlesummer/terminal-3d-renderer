@@ -2,7 +2,7 @@ import threading
 from queue import Queue
 import time
 from math import cos, sin, pi
-from graphics2 import Screen
+from graphics import Screen
 
 
 def render_thread(screen, state, output_queue, running):

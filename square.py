@@ -1,6 +1,6 @@
 import time
 from math import cos, sin, pi
-from graphics2 import Screen
+from graphics import Screen
 
 
 def main():
@@ -20,7 +20,7 @@ def main():
 
         angle = 0.0
         angle_step = pi / (96*8)
-        
+
         # Start timer
         start_time = time.perf_counter()
         target_angle = pi / 2
@@ -44,10 +44,10 @@ def main():
             # Print to screen
             print('\033[H', end='', flush=True)
             print(screen.render(), flush=True)
-            
+
             # Increment angle
             angle += angle_step
-            
+
             # Check if we've reached pi/2
             if angle > target_angle:
                 screen.polygon(square, '█')

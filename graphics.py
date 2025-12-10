@@ -15,12 +15,18 @@ class Point:
     def coords(self):
         return self.x, self.y, self.z
     
+    def coords2(self):
+        return self.x, self.y
+    
+    def __add__(self, other: Self):
+        return Point(self.x+other.x, self.y+other.y, self.z+other.z)
+    
     def __sub__(self, other: Self):
         return Point(self.x-other.x, self.y-other.y, self.z-other.z)
 
 
-class Polygon:
-    """A polygon defined by N vertices in continuous space."""
+class ConvexPolygon:
+    """A convex polygon defined by N vertices in continuous space."""
     vertices: list[tuple[float, float]]
     xs: tuple[float, ...]
     ys: tuple[float, ...]
@@ -30,58 +36,48 @@ class Polygon:
         self.vertices = vertices
         self.xs, self.ys = zip(*vertices)
 
-    @staticmethod    
-    def segment_contains(
-        x:  float, y:  float, 
-        x1: float, y1: float, 
-        x2: float, y2: float,
-    ):
-        """Return True if point (x, y) lies exactly on the segment from (x1, y1) to (x2, y2) inclusive."""
-        if (x-x1)*(y2-y1) - (y-y1)*(x2-x1) != 0:                # Collinearity check (cross product)
-            return False          
-        return (x-x1) * (x-x2) <= 0 and (y-y1) * (y-y2) <= 0    # Between check (inclusive)
-
-    def contains(self, x: float, y: float):
-        """Point-in-polygon (edge/vertex inclusive) using ray casting with a half-open rule."""
-        inside = False
-
-        # Start with last vertex to close the loop
+    def find_intercept_pair(self, y: int) -> tuple[float, float] | None:
+        minx: float | None = None
         x1, y1 = self.vertices[-1]
+
         for x2, y2 in self.vertices:
-            if self.segment_contains(x, y, x1, y1, x2, y2):
-                return True
+            if y1 == y2 == y:       # if y lies in a horizontal edge
+                return (x1, x2) if x1 < x2 else (x2, x1)
 
-            # Ray casting (half-open)
-            if (y1 > y) != (y2 > y):                            # Does the scanline y cross the vertical span of this edge?
-                x_intercept = x1 + (y-y1) * (x2-x1) / (y2-y1)   # Compute x intersection
+            if (y1 <= y) ^ (y2 <= y): # if y ∈ [min(y1,y2), max(y1,y2))
+                x = x1 + (y-y1) * (x2-x1) / (y2-y1)
+                if minx is None:    # first hit
+                    minx = x   
+                else:               # second hit
+                    return (minx, x) if minx < x else (x, minx)
+            x1, y1 = x2, y2
+        return None
 
-                if x < x_intercept:                             # Count only intersections to the RIGHT of the point
-                    inside = not inside
-            x1, y1 = x2, y2                                     # Advance to next vertex
-        return inside
-
-    def lattice_points(self):
-        """Iterate over all (x, y) integer points inside the polygon."""
-        minx, maxx = floor(min(self.xs)), floor(max(self.xs))
+    def lattice_spans(self):
+        """
+        Optimized scanline-based rasterization for convex polygons.
+        More cache-friendly than checking every pixel in bounding box.
+        """
+        if len(self.vertices) < 3: return
         miny, maxy = floor(min(self.ys)), floor(max(self.ys))
 
-        for y in range(miny, maxy + 1):
-            for x in range(minx, maxx + 1):
-                if self.contains(x, y):
-                    yield x, y
+        for y in range(miny, maxy+1):
+            if (pair := self.find_intercept_pair(y)) is not None:
+                minx, maxx = pair
+                yield y, floor(minx), floor(maxx)
 
 
 class Screen:
     """
     Draws shapes on a screen using world coordinates with the origin in the center.
-    Horizontally stretched 2:1 to look right on a terminal.
+    Horizontally stretched 2:1 to look correct on a terminal.
     """
     width: int
     height: int
     ox: int
     oy: int
-    frame: list[str]
     depth: list[float]
+    frame: list[str]
 
     def __init__(self, width: int, height: int):
         self.width = width
@@ -89,106 +85,82 @@ class Screen:
         self.ox = width // 2      # origin at center (x)
         self.oy = height // 2     # origin at center (y)
 
-        # Inline 2D buffers
-        self.frame = [' '] * (width * height)
-        self.depth = [1.0] * (width * height)   # 0.0 = near, 1.0 = far
+        # Use list of single-char strings for multi-byte character support
+        self.depth_buf = [1.0] * (size := width*height)
+        self.frame_buf = [' '] * size
+
+        # Draw borders once on initialization
+        print('\033[2J\033[?25l', end='', flush=True)  # Clear screen, hide cursor
+        print('┌' + '─' * width + '┐')
+        for _ in range(height):
+            print('│' + ' ' * width + '│')
+        print('└' + '─' * width + '┘')
+        print('\033[H', end='', flush=True)  # Move cursor to top
 
     def clear(self):
         """Clear both frame and depth buffers."""
-        self.frame[:] = [' '] * (self.width * self.height)
-        self.depth[:] = [1.0] * (self.width * self.height)
-
-    def set_pixel(self, x: int, y: int, char: str, depth: float):
-        """Draw a single pixel with depth testing."""
-        if (0 <= x < self.width) and (0 <= y < self.height):
-            idx = y * self.width + x
-            if depth <= self.depth[idx]:
-                self.depth[idx] = depth
-                self.frame[idx] = char
+        size = self.width * self.height
+        # Fast clearing using slice assignment
+        self.frame_buf = [' '] * size
+        self.depth_buf = [1.0] * size
 
     def scale_and_translate(self, x: float, y: float):
         """Scale and translate world coordinates to screen-aligned continuous coordinates."""
-        sx = self.ox + x * 2    # horizontal units are 2:1 to compensate terminal aspect ratio
+        sx = self.ox + x*2  # horizontal units are 2:1 to compensate terminal aspect ratio
         sy = self.oy - y
         return sx, sy
 
     def point(self, x: float, y: float, fill: str, depth=0.0):
         """Draw a single world-space point."""
         sx, sy = self.scale_and_translate(x, y)
-        self.set_pixel(floor(sx), floor(sy), fill, depth)
+        sx, sy = int(sx), int(sy)
 
-    def polygon(self, vertices: list[tuple[float, float]], fill, depth=0.0):
+        if (0 <= sx < self.width) and (0 <= sy < self.height):
+            idx = sy * self.width + sx
+            if depth <= self.depth_buf[idx]:
+                self.depth_buf[idx] = depth
+                self.frame_buf[idx] = fill
+
+    def polygon(self, vertices: list[tuple[float, float]], fill: str, depth=0.0):
         """Rasterize and fill a polygon with depth testing."""
-        # Convert polygon from continuous world space to discrete screen space
-        # before generating lattice points; accounts for 2:1 horizontal scaling
-        pixel_vertices = [self.scale_and_translate(x, y) for (x, y) in vertices]
-        polygon = Polygon(pixel_vertices)
 
-        for x, y in polygon.lattice_points():
-            self.set_pixel(x, y, char=fill, depth=depth)
+        # Skip empty fill (fast exit)
+        if not fill: return
+        
+        # Convert polygon from continuous world space to discrete screen space
+        pixel_vertices = [self.scale_and_translate(x, y) for (x, y) in vertices]
+        polygon = ConvexPolygon(pixel_vertices)
+
+        # Cache attributes for maximum performance
+        width, height = self.width, self.height
+        depth_buf = self.depth_buf
+        frame_buf = self.frame_buf
+        
+        for y, x1, x2 in polygon.lattice_spans():
+            if not (0 <= y < height): continue
+            x1, x2 = max(0, x1), min(width-1, x2)
+
+            if x1 > x2: continue
+            idx = y*width + x1
+
+            for _ in range(x1, x2+1):
+                if depth <= depth_buf[idx]:
+                    depth_buf[idx] = depth
+                    frame_buf[idx] = fill
+                idx += 1 
 
     def render(self):
         """Return the frame buffer as a string with borders."""
-        buffer = ['┌' + '─' * self.width + '┐\n']
+        # Build output efficiently using list
+        lines = ['┌' + '─' * self.width + '┐']
+        width = self.width
+        frame = self.frame_buf
 
         for y in range(self.height):
-            offset = y * self.width
-            buffer.append('│')
-            buffer.extend(''.join(self.frame[offset:offset+self.width]))
-            buffer.append('│\n')
+            row = y * width
+            # Join the character list directly
+            line = ''.join(frame[row:row + width])
+            lines.append('│' + line + '│')
 
-        buffer.append('└' + '─' * self.width + '┘')
-        return ''.join(buffer)
-
-
-
-
-def main():
-    import time
-    from math import cos, sin, pi
-    # from graphics import Screen
-
-    try:
-        screen = Screen(width=80, height=40)
-
-        # Define square in Cartesian (world) space
-        side = 25
-        angle = 0.0
-        square = [
-            (-side/2, -side/2), 
-            (side/2,  -side/2), 
-            (side/2,  side/2), 
-            (-side/2, side/2),
-        ]
-
-        # Clear screen and hide cursor
-        print('\033[2J\033[?25l', end='')
-
-        while True:
-            if angle >= pi * 2:
-                angle = 0
-
-            screen.clear()
-
-            # Rotate square in world space
-            rotated = []
-            for x, y in square:
-                nx = x * cos(angle) - y * sin(angle)
-                ny = x * sin(angle) + y * cos(angle)
-                rotated.append((nx, ny))
-
-            # Draw (screen handles coordinate transformation)
-            screen.polygon(rotated, fill='·')
-
-            print('\033[H', end='')
-            print(screen.render())
-
-            angle += pi / 96
-            time.sleep(0.05)
-
-    except KeyboardInterrupt:
-        print('\033[?25h\n\nStopped.')
-
-
-if __name__ == '__main__':
-    main()
+        lines.append('└' + '─' * self.width + '┘')
+        return '\n'.join(lines)
