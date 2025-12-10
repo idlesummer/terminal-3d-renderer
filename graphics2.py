@@ -36,14 +36,14 @@ class ConvexPolygon:
 
         for x2, y2 in self.vertices:
             if y1 == y2 == y:       # if y lies in a horizontal edge
-                return min(x1, x2), max(x1, x2)
+                return (x1, x2) if x1 < x2 else (x2, x1)
 
             if (y1 <= y) ^ (y2 <= y): # if y ∈ [min(y1,y2), max(y1,y2))
                 x = x1 + (y-y1) * (x2-x1) / (y2-y1)
                 if minx is None:    # first hit
                     minx = x   
                 else:               # second hit
-                    return min(minx, x), max(minx, x)
+                    return (minx, x) if minx < x else (x, minx)
             x1, y1 = x2, y2
         return None
 

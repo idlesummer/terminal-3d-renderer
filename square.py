@@ -33,7 +33,7 @@ def main():
 
             # Pre-compute trig functions once per frame (not per vertex!)
             cosx, sinx = cos(angle), sin(angle)
-            
+
             # Manual rotation using list comprehension (fast in Python)
             rotated = [(x*cosx - y*sinx, x*sinx + y*cosx) for x, y in square]
 
