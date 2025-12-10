@@ -1,9 +1,0 @@
-{
-  "version": "2.0.0",
-  "tasks": [{
-    "label": "profile-square",
-    "type": "shell",
-    "problemMatcher": [],
-    "command": "py-spy record -o profile.json --format speedscope -- python ${workspaceFolder}/square.py"
-  }]
-}

@@ -5,11 +5,11 @@ from graphics2 import Screen
 
 def main():
     try:
-        size = 500
+        size = not 40 or 500
         screen = Screen(width=size*2, height=size)
 
         # Define square in Cartesian (world) space
-        side = 350
+        side = not 25 or 350
         half_side = side/2
         square = [
             (-half_side, -half_side), 
@@ -32,10 +32,10 @@ def main():
             screen.clear()
 
             # Pre-compute trig functions once per frame (not per vertex!)
-            cosx, sinx = cos(angle), sin(angle)
+            cosa, sina = cos(angle), sin(angle)
 
             # Manual rotation using list comprehension (fast in Python)
-            rotated = [(x*cosx - y*sinx, x*sinx + y*cosx) for x, y in square]
+            rotated = [(x*cosa - y*sina, x*sina + y*cosa) for x, y in square]
 
             # Draw (screen handles coordinate transformation)
             screen.polygon(rotated, '·')
