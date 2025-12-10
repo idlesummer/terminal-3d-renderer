@@ -38,25 +38,27 @@ def main():
             rotated = [(x*cosa - y*sina, x*sina + y*cosa) for x, y in square]
 
             # Draw (screen handles coordinate transformation)
-            screen.polygon(rotated, '·')
+            screen.polygon(rotated, '█')
             screen.point(0, 0, fill='@')
 
+            # Print to screen
             print('\033[H', end='', flush=True)
             print(screen.render(), flush=True)
-
+            
+            # Increment angle
             angle += angle_step
             
             # Check if we've reached pi/2
-            if angle >= target_angle:
+            if angle > target_angle:
+                screen.polygon(square, '█')
+                screen.point(0, 0, fill='@')
+                print('\033[H', end='', flush=True)
+                print(screen.render(), flush=True)
+                
                 elapsed = time.perf_counter() - start_time
                 print(f'\n\nReached π/2 in {elapsed:.3f} seconds', flush=True)
                 print(f'Average FPS: {(target_angle / angle_step) / elapsed:.1f}', flush=True)
                 break
-            
-            if angle >= pi*2:
-                angle = 0
-            
-            # time.sleep(0.001)
 
     except KeyboardInterrupt:
         print('\033[?25h\n\nStopped.')

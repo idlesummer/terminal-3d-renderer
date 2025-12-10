@@ -29,7 +29,7 @@ class ConvexPolygon:
         """Create polygon from vertices."""
         self.vertices = vertices
         self.xs, self.ys = zip(*vertices)
-      
+
     def find_intercept_pair(self, y: int) -> tuple[float, float] | None:
         minx: float | None = None
         x1, y1 = self.vertices[-1]
@@ -53,8 +53,7 @@ class ConvexPolygon:
         More cache-friendly than checking every pixel in bounding box.
         """
         if len(self.vertices) < 3: return
-        miny = floor(min(self.ys))
-        maxy = floor(max(self.ys))
+        miny, maxy = floor(min(self.ys)), floor(max(self.ys))
 
         for y in range(miny, maxy+1):
             if (pair := self.find_intercept_pair(y)) is not None:
@@ -71,8 +70,8 @@ class Screen:
     height: int
     ox: int
     oy: int
-    frame: list[str]
     depth: list[float]
+    frame: list[str]
 
     def __init__(self, width: int, height: int):
         self.width = width
@@ -81,8 +80,16 @@ class Screen:
         self.oy = height // 2     # origin at center (y)
 
         # Use list of single-char strings for multi-byte character support
-        self.frame_buf = [' '] * (size := width*height)
-        self.depth_buf = [1.0] * size
+        self.depth_buf = [1.0] * (size := width*height)
+        self.frame_buf = [' '] * size
+
+        # Draw borders once on initialization
+        print('\033[2J\033[?25l', end='', flush=True)  # Clear screen, hide cursor
+        print('┌' + '─' * width + '┐')
+        for _ in range(height):
+            print('│' + ' ' * width + '│')
+        print('└' + '─' * width + '┘')
+        print('\033[H', end='', flush=True)  # Move cursor to top
 
     def clear(self):
         """Clear both frame and depth buffers."""
