@@ -32,70 +32,30 @@ class ConvexPolygon:
       
     def find_intercept_pair(self, y: int) -> tuple[float, float] | None:
         minx: float | None = None
-        maxx: float | None = None
-        
         x1, y1 = self.vertices[-1]
+
         for x2, y2 in self.vertices:
-          
-            if y1 == y2 == y:
-                minx = min(x1, x2)
-                maxx = max(x1, x2)
-                break
-                
-            elif (y1 <= y) ^ (y2 <= y):
+            if y1 == y2 == y:       # if y lies in a horizontal edge
+                return min(x1, x2), max(x1, x2)
+
+            if (y1 <= y) ^ (y2 <= y): # if y ∈ [min(y1,y2), max(y1,y2))
                 x = x1 + (y-y1) * (x2-x1) / (y2-y1)
-                
-                if minx is None:
+                if minx is None:    # first hit
                     minx = x   
-                else:
-                    if minx < x:
-                        maxx = x
-                    else:
-                        maxx = minx
-                        minx = x
-                    break
+                else:               # second hit
+                    return min(minx, x), max(minx, x)
             x1, y1 = x2, y2
-        else:
-            return None    # Loop didnt break, didn't find 2 intercepts
-        return minx, maxx
+        return None
 
-
-    def lattice_points(self):
-        """
-        Optimized scanline-based rasterization for convex polygons.
-        More cache-friendly than checking every pixel in bounding box.
-        """
-        if len(self.vertices) < 3:
-            return
-
-        miny = floor(min(self.ys))
-        maxy = floor(max(self.ys))
-
-        # For each scanline
-        for y in range(miny, maxy+1):
-            result = self.find_intercept_pair(y)
-            if result is None:
-                continue
-              
-            minx, maxx = result
-            x1 = floor(minx)
-            x2 = floor(maxx)
-            
-            for x in range(x1, x2+1):
-                yield x, y  
-    
     def lattice_spans(self):
         """
         Optimized scanline-based rasterization for convex polygons.
         More cache-friendly than checking every pixel in bounding box.
         """
-        if len(self.vertices) < 3:
-            return
-
+        if len(self.vertices) < 3: return
         miny = floor(min(self.ys))
         maxy = floor(max(self.ys))
 
-        # For each scanline
         for y in range(miny, maxy+1):
             if (pair := self.find_intercept_pair(y)) is not None:
                 minx, maxx = pair
@@ -105,7 +65,7 @@ class ConvexPolygon:
 class Screen:
     """
     Draws shapes on a screen using world coordinates with the origin in the center.
-    Horizontally stretched 2:1 to look right on a terminal.
+    Horizontally stretched 2:1 to look correct on a terminal.
     """
     width: int
     height: int
@@ -120,39 +80,33 @@ class Screen:
         self.ox = width // 2      # origin at center (x)
         self.oy = height // 2     # origin at center (y)
 
-        size = width * height
         # Use list of single-char strings for multi-byte character support
-        self.frame = [' '] * size
-        # Pre-allocate depth buffer
-        self.depth = [1.0] * size
+        self.frame_buf = [' '] * (size := width*height)
+        self.depth_buf = [1.0] * size
 
     def clear(self):
         """Clear both frame and depth buffers."""
         size = self.width * self.height
         # Fast clearing using slice assignment
-        self.frame[:] = [' '] * size
-        # Fast fill for depth buffer
-        for i in range(size):
-            self.depth[i] = 1.0
-
-    def set_pixel(self, x: int, y: int, char: str, depth: float):
-        """Draw a single pixel with depth testing."""
-        if (0 <= x < self.width) and (0 <= y < self.height):
-            idx = y * self.width + x
-            if depth <= self.depth[idx]:
-                self.depth[idx] = depth
-                self.frame[idx] = char
+        self.frame_buf = [' '] * size
+        self.depth_buf = [1.0] * size
 
     def scale_and_translate(self, x: float, y: float):
         """Scale and translate world coordinates to screen-aligned continuous coordinates."""
-        sx = self.ox + x * 2    # horizontal units are 2:1 to compensate terminal aspect ratio
+        sx = self.ox + x*2  # horizontal units are 2:1 to compensate terminal aspect ratio
         sy = self.oy - y
         return sx, sy
 
     def point(self, x: float, y: float, fill: str, depth=0.0):
         """Draw a single world-space point."""
         sx, sy = self.scale_and_translate(x, y)
-        self.set_pixel(floor(sx), floor(sy), fill, depth)
+        sx, sy = int(sx), int(sy)
+
+        if (0 <= sx < self.width) and (0 <= sy < self.height):
+            idx = sy * self.width + sx
+            if depth <= self.depth_buf[idx]:
+                self.depth_buf[idx] = depth
+                self.frame_buf[idx] = fill
 
     def polygon(self, vertices: list[tuple[float, float]], fill: str, depth=0.0):
         """Rasterize and fill a polygon with depth testing."""
@@ -160,47 +114,36 @@ class Screen:
         pixel_vertices = [self.scale_and_translate(x, y) for (x, y) in vertices]
         polygon = ConvexPolygon(pixel_vertices)
 
-        # Inline the rasterization for maximum performance
-        width = self.width
-        height = self.height
-        depth_buf = self.depth
-        frame_buf = self.frame
-
-        # for x, y in polygon.lattice_points():
-        #     if (0 <= x < width) and (0 <= y < height):
-        #         idx = y * width + x
-        #         if depth <= depth_buf[idx]:
-        #             depth_buf[idx] = depth
-        #             frame_buf[idx] = fill
+        # Cache attributes for maximum performance
+        width, height = self.width, self.height
+        depth_buf = self.depth_buf
+        frame_buf = self.frame_buf
         
         for y, x1, x2 in polygon.lattice_spans():
             if not (0 <= y < height): continue
-            x1 = max(0, x1)
-            x2 = min(width-1, x2)
-            
-            if x1 > x2: continue
-            start = y * width + x1
-            end   = y * width + x2 + 1
-            span_len = end - start
-            
-            # Slice assignment (C-speed, but no depth test)
-            frame_buf[start:end] = [fill] * span_len
-            depth_buf[start:end] = [depth] * span_len
+            x1, x2 = max(0, x1), min(width-1, x2)
 
+            if x1 > x2: continue
+            idx = y*width + x1
+
+            for _ in range(x1, x2+1):
+                if depth <= depth_buf[idx]:
+                    depth_buf[idx] = depth
+                    frame_buf[idx] = fill
+                idx += 1 
 
     def render(self):
         """Return the frame buffer as a string with borders."""
         # Build output efficiently using list
         lines = ['┌' + '─' * self.width + '┐']
-        
         width = self.width
-        frame = self.frame
-        
+        frame = self.frame_buf
+
         for y in range(self.height):
-            offset = y * width
+            row = y * width
             # Join the character list directly
-            line = ''.join(frame[offset:offset + width])
+            line = ''.join(frame[row:row + width])
             lines.append('│' + line + '│')
-        
+
         lines.append('└' + '─' * self.width + '┘')
         return '\n'.join(lines)
