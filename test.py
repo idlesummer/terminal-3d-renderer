@@ -1,87 +1,64 @@
-import threading
-from queue import Queue
-import time
-from math import cos, sin, pi
-from graphics import Screen
+import timeit
+from statistics import mean
 
+# Sample data - 4 vertices (like a cube face)
+vertices = [
+    type('Point', (), {'z': 100.0}),
+    type('Point', (), {'z': 200.0}),
+    type('Point', (), {'z': 300.0}),
+    type('Point', (), {'z': 400.0}),
+]
 
-def render_thread(screen, state, output_queue, running):
-    """Producer: Render frames"""
-    while running['value']:
-        screen.clear()
-        
-        angle = state['angle']
-        cosa, sina = cos(angle), sin(angle)
-        square = state['square']
-        rotated = [(x*cosa - y*sina, x*sina + y*cosa) for x, y in square]
-        
-        screen.polygon(rotated, '█')
-        screen.point(0, 0, fill='@')
-        
-        output = screen.render()
-        
-        # Drop old frames if queue is full
-        if output_queue.qsize() > 1:
-            try:
-                output_queue.get_nowait()
-            except:
-                pass
-        
-        output_queue.put(output)
+def method_sum_div():
+    """Using sum() / len()"""
+    return sum(p.z for p in vertices) / len(vertices)
 
+def method_mean():
+    """Using statistics.mean()"""
+    return mean(p.z for p in vertices)
 
-def print_thread(output_queue, running):
-    """Consumer: Print frames"""
-    while running['value']:
-        try:
-            output = output_queue.get(timeout=0.1)
-            print('\033[H' + output, flush=True)
-        except:
-            pass
+def method_sum_div_list():
+    """Using sum() / len() with list comprehension"""
+    z_values = [p.z for p in vertices]
+    return sum(z_values) / len(z_values)
 
+def method_manual():
+    """Manual accumulation (fastest possible)"""
+    total = 0.0
+    count = 0
+    for p in vertices:
+        total += p.z
+        count += 1
+    return total / count
 
-def run(screen_size=500, square_size=350):
-    screen = Screen(width=screen_size*2, height=screen_size)
-    
-    half_side = square_size / 2
-    state = {
-        'square': [
-            (-half_side, -half_side), 
-            (half_side,  -half_side), 
-            (half_side,  half_side), 
-            (-half_side, half_side),
-        ],
-        'angle': 0.0,
-        'angle_step': pi / (96*8),
-    }
-    
-    running = {'value': True}
-    output_queue = Queue(maxsize=2)
-    
-    # Start threads
-    renderer = threading.Thread(target=render_thread, args=(screen, state, output_queue, running))
-    printer = threading.Thread(target=print_thread, args=(output_queue, running))
-    
-    renderer.start()
-    printer.start()
-    
-    # Main thread: Update game state
-    TICK = 1.0 / 60.0
-    try:
-        while running['value']:
-            state['angle'] += state['angle_step']
-            time.sleep(TICK)
-    except KeyboardInterrupt:
-        running['value'] = False
-    
-    renderer.join()
-    printer.join()
-    print('\033[?25h')
+def method_manual_fixed():
+    """Manual with known count (for quads only)"""
+    total = 0.0
+    for p in vertices:
+        total += p.z
+    return total * 0.25  # Divide by 4
 
+# Run benchmarks
+iterations = 1_000_000
 
-def main():
-    run(screen_size=500, square_size=350)
+print("Benchmarking z-depth calculations (1 million iterations):\n")
 
+time1 = timeit.timeit(method_sum_div, number=iterations)
+print(f"sum() / len():              {time1:.4f}s")
 
-if __name__ == '__main__':
-    main()
+time2 = timeit.timeit(method_mean, number=iterations)
+print(f"statistics.mean():          {time2:.4f}s")
+
+time3 = timeit.timeit(method_sum_div_list, number=iterations)
+print(f"sum() / len() (list):       {time3:.4f}s")
+
+time4 = timeit.timeit(method_manual, number=iterations)
+print(f"Manual loop:                {time4:.4f}s")
+
+time5 = timeit.timeit(method_manual_fixed, number=iterations)
+print(f"Manual (fixed count):       {time5:.4f}s")
+
+print(f"\nSpeedup factor:")
+print(f"sum() / len() vs mean():    {time2/time1:.2f}x faster")
+print(f"Manual vs sum():            {time1/time4:.2f}x faster")
+print(f"Fixed vs sum():             {time1/time5:.2f}x faster")

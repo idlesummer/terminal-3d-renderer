@@ -43,18 +43,18 @@ def main():
               Point( half_side,  half_side, z_dist + side),
               Point(-half_side,  half_side, z_dist + side)]
 
-        f6 = [Point(-half_side, -half_side, z_dist),
-              Point( half_side, -half_side, z_dist),
-              Point( half_side, -half_side, z_dist + side),
-              Point(-half_side, -half_side, z_dist + side)]
+        # f6 = [Point(-half_side, -half_side, z_dist),
+        #       Point( half_side, -half_side, z_dist),
+        #       Point( half_side, -half_side, z_dist + side),
+        #       Point(-half_side, -half_side, z_dist + side)]
 
         faces = [
-            (f1, '█'),  # Solid
-            (f2, '▓'),  # Dark
-            (f3, '▒'),  # Medium
-            (f4, '░'),  # Light
-            (f5, '•'),  # Small square
-            (f6, '')   # Bullet point
+            (f1, '█'),  # Front - Solid
+            (f2, '▓'),  # Right - Dark
+            (f3, '▒'),  # Back - Medium
+            (f4, '░'),  # Left - Light
+            (f5, '▪'),  # Top - Small square
+            # (f6, '·')   # Bottom - Dot
         ]
 
         # ===== ROTATIONS =====
@@ -92,6 +92,11 @@ def main():
             rotated = rotate(point - center, angle_x, angle_y, angle_z)
             translated = rotated + center
             return project(translated, focal_length)
+        
+        # ===== CENTROID Z-DEPTH =====
+        def get_centroid_depth(transformed_verts):
+            """Calculate average z of all vertices (centroid z-coordinate)"""
+            return sum(p.z for p in transformed_verts) / len(transformed_verts)
 
         # Clear screen and hide cursor
         print('\033[2J\033[?25l', end='', flush=True)
@@ -99,36 +104,36 @@ def main():
         while True:
             screen.clear()
 
-            # Transform all faces and calculate their average z
+            # Transform all faces and calculate centroid depth
             face_data = []
             for face_verts, fill in faces:
                 # Transform vertices
-                transformed = [transform(p, angle, angle, angle, c, focal_length) for p in face_verts]
+                transformed = [transform(p, angle, angle, angle, c, focal_length) 
+                              for p in face_verts]
                 
-                # Calculate average z (depth)
-                avg_z = sum(p.z for p in transformed) / len(transformed)
+                # Calculate centroid z-depth (foolproof method)
+                depth = get_centroid_depth(transformed)
                 
                 # Store for sorting
                 projected = [p.coords2() for p in transformed]
-                face_data.append((avg_z, projected, fill))
+                face_data.append((depth, projected, fill))
             
             # Sort by depth (furthest first = largest z)
             face_data.sort(key=lambda x: x[0], reverse=True)
             
-            # Draw faces back-to-front
-            for avg_z, projected, fill in face_data:
+            # Draw faces back-to-front (painter's algorithm)
+            for depth, projected, fill in face_data:
                 screen.polygon(projected, fill=fill)
 
             print('\033[H', end='', flush=True)
             print(screen.render(), flush=True)
 
-            angle += pi / 96
+            angle += pi / (96 * 4)
             if angle >= pi * 2:
                 angle = 0
 
     except KeyboardInterrupt:
         print('\033[?25h\n\nStopped.')
-
     finally:
         print('\033[?25h', end='', flush=True)
 
