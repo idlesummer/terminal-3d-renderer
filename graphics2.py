@@ -82,8 +82,7 @@ class ConvexPolygon:
             x2 = floor(maxx)
             
             for x in range(x1, x2+1):
-                yield x, y
-                
+                yield x, y  
     
     def lattice_spans(self):
         """
