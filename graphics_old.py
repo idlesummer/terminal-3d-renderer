@@ -39,7 +39,7 @@ class Polygon:
         """Return True if point (x, y) lies exactly on the segment from (x1, y1) to (x2, y2) inclusive."""
         if (x-x1)*(y2-y1) - (y-y1)*(x2-x1) != 0:                # Collinearity check (cross product)
             return False          
-        return (x-x1) * (x-x2) <= 0 and (y-y1) * (y-y2) <= 0    # Between check (inclusive)
+        return (x-x1)*(x-x2) <= 0 and (y-y1)*(y-y2) <= 0        # Between check (inclusive)
 
     def contains(self, x: float, y: float):
         """Point-in-polygon (edge/vertex inclusive) using ray casting with a half-open rule."""
