@@ -11,13 +11,7 @@ class Point:
         self.x = x
         self.y = y
         self.z = z
-        
-    def coords(self):
-        return self.x, self.y, self.z
-    
-    def coords2(self):
-        return self.x, self.y
-    
+
     def __add__(self, other: Self):
         return Point(self.x+other.x, self.y+other.y, self.z+other.z)
     
