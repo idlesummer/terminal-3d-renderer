@@ -53,12 +53,12 @@ def main():
               Point(-half_side, -half_side, z_dist + side)]
 
         faces = [
-            (f1, '█'),  # Front - Solid
+            (f1, ''),   # Front - Solid
             (f2, '▓'),  # Right - Dark
             (f3, '▒'),  # Back - Medium
             (f4, '░'),  # Left - Light
             (f5, '▪'),  # Top - Small square
-            (f6, '')   # Bottom - Dot
+            (f6, '█')   # Bottom - Dot
         ]
 
         # ===== ROTATIONS =====
@@ -67,24 +67,21 @@ def main():
             return Point(
                 point.x,
                 point.y*cos_ax - point.z*sin_ax,
-                point.y*sin_ax + point.z*cos_ax
-            )
+                point.y*sin_ax + point.z*cos_ax)
 
         def rotate_y(point: Point, cos_ay: float, sin_ay: float):
             """Rotate around Y-axis using direct attribute access"""
             return Point(
                 point.x*cos_ay + point.z*sin_ay,
                 point.y,
-                point.z*cos_ay - point.x*sin_ay
-            )
+                point.z*cos_ay - point.x*sin_ay)
 
         def rotate_z(point: Point, cos_az: float, sin_az: float):
             """Rotate around Z-axis using direct attribute access"""
             return Point(
                 point.x*cos_az - point.y*sin_az,
                 point.x*sin_az + point.y*cos_az,
-                point.z
-            )
+                point.z)
 
         def rotate(
             point: Point, 
@@ -118,7 +115,7 @@ def main():
             translated = rotated + center
             return project(translated, focal_length)
 
-        # ===== CENTROID Z-DEPTH (OPTIMIZED - INLINE) =====
+        # ===== CENTROID Z-DEPTH =====
         def get_centroid_depth(transformed_verts):
             """Optimized for quad faces - manual loop with direct access"""
             total = 0.0
@@ -129,9 +126,9 @@ def main():
         print('\033[2J\033[?25l', flush=True)
 
         # ===== ANGLE STEPS =====
-        angle_step_x = pi / (96*2)
-        angle_step_y = pi / (96*4)
-        angle_step_z = pi / (96*8)
+        angle_step_x = pi / (48*2)
+        angle_step_y = pi / (48*4)
+        angle_step_z = pi / (48*8)
         target_angle = pi * 2
 
         while True:
@@ -145,16 +142,16 @@ def main():
             # Transform all faces and calculate centroid depth
             face_data = []
             for face_verts, fill in faces:
-                # Transform vertices (optimized with cached trig)
+                # Transform vertices
                 transformed = [
                     transform(p, cos_ax, sin_ax, cos_ay, sin_ay, cos_az, sin_az, c, focal_length) 
                     for p in face_verts
                 ]
                 
-                # Calculate depth (optimized manual loop)
+                # Calculate depth
                 depth = get_centroid_depth(transformed)
                 
-                # Project to 2D (direct attribute access)
+                # Project to 2D
                 projected = [(p.x, p.y) for p in transformed]
                 face_data.append((depth, projected, fill))
             
@@ -165,7 +162,7 @@ def main():
             for depth, projected, fill in face_data:
                 screen.polygon(projected, fill=fill)
 
-            # Display rendered output (optimized - concatenated print)
+            # Display rendered output
             print('\033[H' + screen.render(), flush=True)
             
             # Update angles independently
