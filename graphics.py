@@ -117,10 +117,9 @@ class Screen:
 
     def polygon(self, vertices: list[tuple[float, float]], fill: str, depth=0.0):
         """Rasterize and fill a polygon with depth testing."""
-
         # Skip empty fill (fast exit)
         if not fill: return
-        
+
         # Convert polygon from continuous world space to discrete screen space
         pixel_vertices = [self.scale_and_translate(x, y) for (x, y) in vertices]
         polygon = ConvexPolygon(pixel_vertices)
@@ -129,7 +128,7 @@ class Screen:
         width, height = self.width, self.height
         depth_buf = self.depth_buf
         frame_buf = self.frame_buf
-        
+
         for y, x1, x2 in polygon.lattice_spans():
             if not (0 <= y < height): continue
             x1, x2 = max(0, x1), min(width-1, x2)

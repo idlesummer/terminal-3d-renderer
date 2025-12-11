@@ -5,7 +5,7 @@ from graphics import Point, Screen
 
 def main():
     try:
-        size = 500
+        size = 600
         screen = Screen(width=size*2, height=size)
 
         # ===== DEFINITIONS =====
@@ -21,12 +21,11 @@ def main():
         c = Point(0, 0, z_dist + half_side)
 
         # ===== FACES =====
-        
         f1 = [Point(-half_side, -half_side, z_dist),        # front
               Point( half_side, -half_side, z_dist),
               Point( half_side,  half_side, z_dist),
               Point(-half_side,  half_side, z_dist)]
-        
+
         f2 = [Point( half_side, -half_side, z_dist),        # right
               Point( half_side,  half_side, z_dist),
               Point( half_side,  half_side, z_dist + side),
@@ -169,7 +168,7 @@ def main():
             angle_x += angle_step_x
             angle_y += angle_step_y
             angle_z += angle_step_z
-            
+
             # Wrap angles
             if angle_x >= target_angle: angle_x = 0
             if angle_y >= target_angle: angle_y = 0
