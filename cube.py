@@ -1,4 +1,3 @@
-from time import perf_counter
 from math import cos, sin, pi
 from graphics import Point, Screen
 
