@@ -1,5 +1,5 @@
 from math import cos, sin, pi
-from graphics import Point, Screen
+from src.graphics import Point, Screen
 
 
 def main():
@@ -82,9 +82,9 @@ def main():
                 point.z)
 
         def rotate(
-            point: Point, 
-            cos_ax: float, sin_ax: float, 
-            cos_ay: float, sin_ay: float, 
+            point: Point,
+            cos_ax: float, sin_ax: float,
+            cos_ay: float, sin_ay: float,
             cos_az: float, sin_az: float
         ):
             """Apply all three rotations"""
@@ -102,9 +102,9 @@ def main():
 
         # ===== TRANSFORMATION =====
         def transform(
-            point: Point, 
-            cos_ax: float, sin_ax: float, 
-            cos_ay: float, sin_ay: float, 
+            point: Point,
+            cos_ax: float, sin_ax: float,
+            cos_ay: float, sin_ay: float,
             cos_az: float, sin_az: float,
             center: Point, focal_length: float
         ):
@@ -131,7 +131,7 @@ def main():
 
         while True:
             screen.clear()
-            
+
             # Precompute trig values for each axis
             cos_ax, sin_ax = cos(angle_x), sin(angle_x)
             cos_ay, sin_ay = cos(angle_y), sin(angle_y)
@@ -142,27 +142,27 @@ def main():
             for face_verts, fill in faces:
                 # Transform vertices
                 transformed = [
-                    transform(p, cos_ax, sin_ax, cos_ay, sin_ay, cos_az, sin_az, c, focal_length) 
+                    transform(p, cos_ax, sin_ax, cos_ay, sin_ay, cos_az, sin_az, c, focal_length)
                     for p in face_verts
                 ]
-                
+
                 # Calculate depth
                 depth = get_centroid_depth(transformed)
-                
+
                 # Project to 2D
                 projected = [(p.x, p.y) for p in transformed]
                 face_data.append((depth, projected, fill))
-            
+
             # Sort by depth (furthest first = largest z)
             face_data.sort(key=lambda x: x[0], reverse=True)
-            
+
             # Draw faces back-to-front (painter's algorithm)
             for depth, projected, fill in face_data:
                 screen.polygon(projected, fill=fill)
 
             # Display rendered output
             print('\033[H' + screen.render(), flush=True)
-            
+
             # Update angles independently
             angle_x += angle_step_x
             angle_y += angle_step_y

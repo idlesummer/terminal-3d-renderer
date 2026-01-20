@@ -1,6 +1,6 @@
 import time
 from math import cos, sin, pi
-from graphics import Screen
+from src.graphics import Screen
 
 
 def main():
@@ -12,9 +12,9 @@ def main():
         side = not 25 or 350
         half_side = side/2
         square = [
-            (-half_side, -half_side), 
-            (half_side,  -half_side), 
-            (half_side,  half_side), 
+            (-half_side, -half_side),
+            (half_side,  -half_side),
+            (half_side,  half_side),
             (-half_side, half_side),
         ]
 
@@ -54,7 +54,7 @@ def main():
                 screen.point(0, 0, fill='@')
                 print('\033[H', end='', flush=True)
                 print(screen.render(), flush=True)
-                
+
                 elapsed = time.perf_counter() - start_time
                 print(f'\n\nReached π/2 in {elapsed:.3f} seconds', flush=True)
                 print(f'Average FPS: {(target_angle / angle_step) / elapsed:.1f}', flush=True)
