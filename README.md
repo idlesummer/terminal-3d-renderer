@@ -1,4 +1,4 @@
-# terminal-3d-renderer
+# Terminal-based 3D Graphics Renderer
 
 A terminal-based 3D graphics renderer built from scratch to show my understanding of basic computer graphics concepts and discrete mathematics.
 
