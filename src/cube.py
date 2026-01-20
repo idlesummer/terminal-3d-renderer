@@ -60,56 +60,52 @@ def main():
         ]
 
         # ===== ROTATIONS =====
-        def rotate_x(point: Point, cos_ax: float, sin_ax: float):
-            """Rotate around X-axis using direct attribute access"""
+        def rotate_x(point: Point, angle: float):
+            """Rotate around X-axis"""
+            cos_a = cos(angle)
+            sin_a = sin(angle)
             return Point(
                 point.x,
-                point.y*cos_ax - point.z*sin_ax,
-                point.y*sin_ax + point.z*cos_ax)
+                point.y*cos_a - point.z*sin_a,
+                point.y*sin_a + point.z*cos_a)
 
-        def rotate_y(point: Point, cos_ay: float, sin_ay: float):
-            """Rotate around Y-axis using direct attribute access"""
+        def rotate_y(point: Point, angle: float):
+            """Rotate around Y-axis"""
+            cos_a = cos(angle)
+            sin_a = sin(angle)
             return Point(
-                point.x*cos_ay + point.z*sin_ay,
+                point.x*cos_a + point.z*sin_a,
                 point.y,
-                point.z*cos_ay - point.x*sin_ay)
+                point.z*cos_a - point.x*sin_a)
 
-        def rotate_z(point: Point, cos_az: float, sin_az: float):
-            """Rotate around Z-axis using direct attribute access"""
+        def rotate_z(point: Point, angle: float):
+            """Rotate around Z-axis"""
+            cos_a = cos(angle)
+            sin_a = sin(angle)
             return Point(
-                point.x*cos_az - point.y*sin_az,
-                point.x*sin_az + point.y*cos_az,
+                point.x*cos_a - point.y*sin_a,
+                point.x*sin_a + point.y*cos_a,
                 point.z)
 
-        def rotate(
-            point: Point,
-            cos_ax: float, sin_ax: float,
-            cos_ay: float, sin_ay: float,
-            cos_az: float, sin_az: float
-        ):
+        def rotate(point: Point, angle_x: float, angle_y: float, angle_z: float):
             """Apply all three rotations"""
-            point = rotate_z(point, cos_az, sin_az)
-            point = rotate_y(point, cos_ay, sin_ay)
-            return rotate_x(point, cos_ax, sin_ax)
+            point = rotate_z(point, angle_z)
+            point = rotate_y(point, angle_y)
+            return rotate_x(point, angle_x)
 
         # ===== PROJECTION =====
         def project(point: Point, focal_length: float):
-            """Perspective projection with direct attribute access"""
+            """Perspective projection"""
             if point.z <= 0:
                 return Point(0, 0, 0)
             scale = focal_length / point.z
             return Point(point.x * scale, point.y * scale, point.z)
 
         # ===== TRANSFORMATION =====
-        def transform(
-            point: Point,
-            cos_ax: float, sin_ax: float,
-            cos_ay: float, sin_ay: float,
-            cos_az: float, sin_az: float,
-            center: Point, focal_length: float
-        ):
+        def transform(point: Point, angle_x: float, angle_y: float, angle_z: float,
+                     center: Point, focal_length: float):
             """Transform: translate, rotate, translate back, project"""
-            rotated = rotate(point-center, cos_ax, sin_ax, cos_ay, sin_ay, cos_az, sin_az)
+            rotated = rotate(point - center, angle_x, angle_y, angle_z)
             translated = rotated + center
             return project(translated, focal_length)
 
@@ -132,17 +128,12 @@ def main():
         while True:
             screen.clear()
 
-            # Precompute trig values for each axis
-            cos_ax, sin_ax = cos(angle_x), sin(angle_x)
-            cos_ay, sin_ay = cos(angle_y), sin(angle_y)
-            cos_az, sin_az = cos(angle_z), sin(angle_z)
-
             # Transform all faces and calculate centroid depth
             face_data = []
             for face_verts, fill in faces:
                 # Transform vertices
                 transformed = [
-                    transform(p, cos_ax, sin_ax, cos_ay, sin_ay, cos_az, sin_az, c, focal_length)
+                    transform(p, angle_x, angle_y, angle_z, c, focal_length)
                     for p in face_verts
                 ]
 
