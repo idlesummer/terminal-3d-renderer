@@ -354,7 +354,7 @@ Side view (looking along X-axis):
 
 **Projection formula:**
 
-$$x' = \frac{x z'}{z}, \quad y' = \frac{y z'}{z}, \quad z' = focal\_length$$
+$$x' = \frac{x \cdot z'}{z}, \quad y' = \frac{y \cdot z'}{z}, \quad z' = \text{focal length}$$
 
 ```python
 def project(point_3d, focal_length=256):
