@@ -4,6 +4,43 @@ A terminal-based 3D graphics renderer built from scratch to show my understandin
 
 ---
 
+<div align="center">
+  <h2>⭐ My Featured Projects</h2>
+  <table>
+    <tr>
+      <td width="50%" valign="top">
+        <h3><a href="https://github.com/idlesummer/pen">🖊️ pen</a></h3>
+        <p><em>File-based routing for React Ink terminal apps</em></p>
+        <p>
+          <a href="https://npmjs.com/package/@idlesummer/pen">
+            <img src="https://img.shields.io/npm/v/@idlesummer/pen?style=flat-square" alt="npm"/>
+          </a>
+          <img src="https://img.shields.io/badge/-TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"/>
+          <img src="https://img.shields.io/badge/-React-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React"/>
+          <img src="https://img.shields.io/badge/-Ink-1a1a1a?style=flat-square&logo=react&logoColor=white" alt="Ink"/>
+          <img src="https://img.shields.io/badge/-Rolldown-FF5500?style=flat-square&logo=rolldown&logoColor=white" alt="Rolldown"/>
+        </p>
+        <p>Bring Next.js App Router patterns to your terminal apps. Zero-config file-based routing powered by React Ink.</p>
+        <br>
+      </td>
+      <td width="50%" valign="top">
+        <h3><a href="https://github.com/idlesummer/tasker">⚡ tasker</a></h3>
+        <p><em>Elegant task pipelines with beautiful spinners</em></p>
+        <p>
+          <a href="https://npmjs.com/package/@idlesummer/tasker">
+            <img src="https://img.shields.io/npm/v/@idlesummer/tasker?style=flat-square" alt="npm"/>
+          </a>
+          <img src="https://img.shields.io/badge/-TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"/>
+        </p>
+        <p>Lightweight task runner with type-safe context passing and beautiful CLI spinners. Perfect for build scripts.</p>
+        <br>
+      </td>
+    </tr>
+  </table>
+</div>
+
+---
+
 ## Setup
 
 This project renders a spinning 3D cube in your terminal using basic math and Python.
