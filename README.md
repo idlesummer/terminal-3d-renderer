@@ -1,4 +1,4 @@
-# Spinning Cube
+# terminal-3d-renderer
 
 A terminal-based 3D graphics renderer built from scratch to show my understanding of basic computer graphics concepts and discrete mathematics.
 
