@@ -8,7 +8,7 @@ A terminal-based 3D graphics renderer built from scratch to show my understandin
   <h2>⭐ My Featured Projects</h2>
   <table>
     <tr>
-      <td width="50%" valign="top">
+      <td width="33%" valign="top">
         <h3><a href="https://github.com/idlesummer/pen">🖊️ pen</a></h3>
         <p><em>File-based routing for React Ink terminal apps</em></p>
         <p>
@@ -23,7 +23,7 @@ A terminal-based 3D graphics renderer built from scratch to show my understandin
         <p>Bring Next.js App Router patterns to your terminal apps. Zero-config file-based routing powered by React Ink.</p>
         <br>
       </td>
-      <td width="50%" valign="top">
+      <td width="33%" valign="top">
         <h3><a href="https://github.com/idlesummer/tasker">⚡ tasker</a></h3>
         <p><em>Elegant task pipelines with beautiful spinners</em></p>
         <p>
@@ -33,6 +33,16 @@ A terminal-based 3D graphics renderer built from scratch to show my understandin
           <img src="https://img.shields.io/badge/-TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"/>
         </p>
         <p>Lightweight task runner with type-safe context passing and beautiful CLI spinners. Perfect for build scripts.</p>
+        <br>
+      </td>
+      <td width="33%" valign="top">
+        <h3><a href="https://github.com/idlesummer/terminal-3d-renderer">🎮 terminal-3d-renderer</a></h3>
+        <p><em>3D graphics renderer from scratch in terminal</em></p>
+        <p>
+          <img src="https://img.shields.io/badge/-Python-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python"/>
+          <img src="https://img.shields.io/badge/-Computer%20Graphics-FF6B6B?style=flat-square" alt="Computer Graphics"/>
+        </p>
+        <p>Terminal-based 3D renderer built from scratch. Demonstrates rotation, projection, and rasterization with pure math.</p>
         <br>
       </td>
     </tr>
